@@ -1,0 +1,78 @@
+:root {
+    --primary-blue: #0f172a;
+    --accent-orange: #f97316;
+    --accent-orange-hover: #ea580c;
+    --bg-light: #f8fafc;
+}
+
+body {
+    background-color: var(--bg-light);
+    color: #334155;
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* Navbar in blu scuro con dettagli arancioni */
+.navbar-custom {
+    background-color: var(--primary-blue) !important;
+    border-bottom: 3px solid var(--accent-orange);
+}
+
+.navbar-custom .navbar-brand,
+.navbar-custom .nav-link {
+    color: #ffffff !important;
+}
+
+.navbar-custom .nav-link:hover {
+    color: var(--accent-orange) !important;
+}
+
+/* Pulsanti personalizzati */
+.btn-primary {
+    background-color: var(--accent-orange) !important;
+    border-color: var(--accent-orange) !important;
+    color: #fff !important;
+    transition: all 0.2s ease-in-out;
+}
+
+.btn-primary:hover {
+    background-color: var(--accent-orange-hover) !important;
+    border-color: var(--accent-orange-hover) !important;
+}
+
+.btn-outline-primary {
+    color: var(--accent-orange) !important;
+    border-color: var(--accent-orange) !important;
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--accent-orange) !important;
+    color: #fff !important;
+}
+
+/* Card ed elementi */
+.card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.08), 0 2px 4px -2px rgba(15, 23, 42, 0.08);
+    transition: transform 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-3px);
+}
+
+/* Intestazioni e tabelle */
+h1, h2, h3, h4, h5 {
+    color: var(--primary-blue);
+}
+
+.table thead {
+    background-color: var(--primary-blue);
+    color: #ffffff;
+}
+
+footer {
+    background-color: var(--primary-blue);
+    color: #94a3b8;
+    border-top: 3px solid var(--accent-orange);
+}

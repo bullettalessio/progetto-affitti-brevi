@@ -1,0 +1,240 @@
+sudo tee index.html > /dev/null << 'EOF'
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestione Affitti Brevi</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f4f9; }
+        h1, h2 { color: #333; }
+        .card { background: white; padding: 20px; margin-bottom: 20px; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .immobile { border-bottom: 1px solid #eee; padding: 10px 0; }
+        form label { display: block; margin-top: 10px; font-weight: bold; }
+        form input, form select { width: 100%; padding: 8px; margin-top: 5px; box-sizing: border-box; }
+        form button { margin-top: 15px; background-color: #28a745; color: white; border: none; padding: 10px 15px; cursor: pointer; border-radius: 4px; }
+        form button:hover { background-color: #218838; }
+        #messaggio { margin-top: 10px; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        table, th, td { border: 1px solid #ddd; }
+        th, td { padding: 10px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .filtro-box { margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+    <h1>App Affitti Brevi</h1>
+    
+    <div class="card">
+        <h2>Filtra per Località</h2>
+        <div class="filtro-box">
+            <select id="filtro-localita">
+                <option value="0">Tutte le località</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Immobili Disponibili</h2>
+        <div id="lista-immobili">Caricamento...</div>
+    </div>
+
+    <div class="card">
+        <h2>Effettua una Prenotazione</h2>
+        <form id="form-prenotazione">
+            <label for="immobile_id">Seleziona Immobile:</label>
+            <select id="immobile_id" required>
+                <option value="">-- Seleziona un immobile --</option>
+            </select>
+
+            <label for="ospite_id">ID Ospite:</label>
+            <input type="number" id="ospite_id" value="1" required>
+
+            <label for="arrivo">Data Arrivo:</label>
+            <input type="date" id="arrivo" required>
+
+            <label for="partenza">Data Partenza:</label>
+            <input type="date" id="partenza" required>
+
+            <label for="num_ospiti">Numero Ospiti:</label>
+            <input type="number" id="num_ospiti" value="2" min="1" required>
+
+            <label for="totale">Prezzo Totale Calcolato (€):</label>
+            <input type="number" step="0.01" id="totale" readonly required placeholder="Seleziona le date e l'immobile">
+
+            <button type="submit">Prenota Ora</button>
+        </form>
+        <div id="messaggio"></div>
+    </div>
+
+    <div class="card">
+        <h2>Elenco Prenotazioni</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Immobile</th>
+                    <th>Arrivo</th>
+                    <th>Partenza</th>
+                    <th>Totale</th>
+                    <th>Stato</th>
+                </tr>
+            </thead>
+            <tbody id="tabella-prenotazioni">
+                <tr><td colspan="6">Caricamento...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        let mappaPrezzi = {};
+
+        // 1. Carica Località
+        fetch('api/localita.php')
+            .then(res => res.json())
+            .then(data => {
+                const selectFiltro = document.getElementById('filtro-localita');
+                data.forEach(loc => {
+                    const opt = document.createElement('option');
+                    opt.value = loc.id;
+                    opt.textContent = loc.nome;
+                    selectFiltro.appendChild(opt);
+                });
+            });
+
+        // 2. Carica Immobili
+        function caricaImmobili(localitaId = 0) {
+            const url = localitaId > 0 ? `api/immobili.php?localita_id=${localitaId}` : 'api/immobili.php';
+            
+            fetch(url)
+                .then(res => res.json())
+                .then(data => {
+                    const container = document.getElementById('lista-immobili');
+                    const selectImmobile = document.getElementById('immobile_id');
+                    container.innerHTML = '';
+                    selectImmobile.innerHTML = '<option value="">-- Seleziona un immobile --</option>';
+
+                    mappaPrezzi = {};
+
+                    if (data.length === 0) {
+                        container.innerHTML = '<p>Nessun immobile trovato.</p>';
+                        return;
+                    }
+
+                    data.forEach(imm => {
+                        mappaPrezzi[imm.id] = parseFloat(imm.prezzo_notte);
+
+                        const div = document.createElement('div');
+                        div.className = 'immobile';
+                        div.innerHTML = `<h3>${imm.titolo} (${imm.localita})</h3>
+                                         <p>${imm.descrizione}</p>
+                                         <p><strong>Prezzo a notte:</strong> €${imm.prezzo_notte}</p>`;
+                        container.appendChild(div);
+
+                        const option = document.createElement('option');
+                        option.value = imm.id;
+                        option.textContent = `${imm.titolo} (€${imm.prezzo_notte}/notte)`;
+                        selectImmobile.appendChild(option);
+                    });
+                    calcolaTotale();
+                });
+        }
+
+        document.getElementById('filtro-localita').addEventListener('change', function() {
+            caricaImmobili(this.value);
+        });
+
+        // 3. Calcolo Totale Sicuro
+        function calcolaTotale() {
+            const id = document.getElementById('immobile_id').value;
+            const arrivoVal = document.getElementById('arrivo').value;
+            const partenzaVal = document.getElementById('partenza').value;
+
+            if (id && arrivoVal && partenzaVal) {
+                const partiArrivo = arrivoVal.split('-');
+                const partiPartenza = partenzaVal.split('-');
+                
+                const d1 = new Date(partiArrivo[0], partiArrivo[1] - 1, partiArrivo[2]);
+                const d2 = new Date(partiPartenza[0], partiPartenza[1] - 1, partiPartenza[2]);
+                
+                const diffTime = d2 - d1;
+                const diffNotti = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+                if (diffNotti > 0 && mappaPrezzi[id]) {
+                    const totale = diffNotti * mappaPrezzi[id];
+                    document.getElementById('totale').value = totale.toFixed(2);
+                } else {
+                    document.getElementById('totale').value = '';
+                }
+            } else {
+                document.getElementById('totale').value = '';
+            }
+        }
+
+        document.getElementById('immobile_id').addEventListener('change', calcolaTotale);
+        document.getElementById('arrivo').addEventListener('change', calcolaTotale);
+        document.getElementById('partenza').addEventListener('change', calcolaTotale);
+
+        // 4. Carica Prenotazioni
+        function caricaPrenotazioni() {
+            fetch('api/prenotazioni.php')
+                .then(res => res.json())
+                .then(data => {
+                    const tbody = document.getElementById('tabella-prenotazioni');
+                    tbody.innerHTML = '';
+                    if (data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="6">Nessuna prenotazione presente.</td></tr>';
+                        return;
+                    }
+                    data.forEach(p => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `<td>${p.id}</td>
+                                        <td>${p.immobile}</td>
+                                        <td>${p.arrivo}</td>
+                                        <td>${p.partenza}</td>
+                                        <td>€${p.totale}</td>
+                                        <td>${p.stato}</td>`;
+                        tbody.appendChild(tr);
+                    });
+                });
+        }
+
+        // 5. Invia Prenotazione
+        document.getElementById('form-prenotazione').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const dati = {
+                immobile_id: parseInt(document.getElementById('immobile_id').value),
+                ospite_id: parseInt(document.getElementById('ospite_id').value),
+                arrivo: document.getElementById('arrivo').value,
+                partenza: document.getElementById('partenza').value,
+                num_ospiti: parseInt(document.getElementById('num_ospiti').value),
+                totale: parseFloat(document.getElementById('totale').value)
+            };
+
+            fetch('api/prenotazioni.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(dati)
+            })
+            .then(res => res.json())
+            .then(response => {
+                const msg = document.getElementById('messaggio');
+                if (response.successo) {
+                    msg.style.color = 'green';
+                    msg.textContent = 'Prenotazione effettuata con successo! ID: ' + response.id;
+                    document.getElementById('form-prenotazione').reset();
+                    caricaPrenotazioni();
+                } else {
+                    msg.style.color = 'red';
+                    msg.textContent = 'Errore: ' + (response.errore || 'Impossibile prenotare');
+                }
+            });
+        });
+
+        // Inizializzazione
+        caricaImmobili();
+        caricaPrenotazioni();
+    </script>
+</body>
+</html>
+EOF

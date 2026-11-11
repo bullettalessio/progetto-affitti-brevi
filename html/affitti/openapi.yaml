@@ -1,0 +1,51 @@
+openapi: 3.0.3
+info:
+  title: API Affitti Brevi Umbria
+  version: 1.0.0
+  description: Documentazione ufficiale delle API REST per il progetto scolastico Affitti Brevi.
+paths:
+  /api/localita.php:
+    get:
+      summary: Elenco località
+      responses:
+        '200':
+          description: Lista di tutte le località umbre in formato JSON.
+  /api/immobili.php:
+    get:
+      summary: Ricerca e dettaglio immobili
+      parameters:
+        - name: localita
+          in: query
+          schema:
+            type: string
+        - name: prezzo_max
+          in: query
+          schema:
+            type: number
+      responses:
+        '200':
+          description: Elenco immobili filtrati ordinati per prezzo crescente.
+    post:
+      summary: Inserimento nuovo immobile (Host)
+      responses:
+        '201':
+          description: Immobile creato con successo.
+  /api/login.php:
+    post:
+      summary: Autenticazione e Registrazione utente
+      responses:
+        '200':
+          description: Token di accesso generato.
+        '201':
+          description: Utente registrato con successo.
+  /api/prenotazioni.php:
+    get:
+      summary: Visualizzazione prenotazioni
+      responses:
+        '200':
+          description: Elenco prenotazioni personali o ricevute.
+    post:
+      summary: Creazione nuova prenotazione
+      responses:
+        '201':
+          description: Prenotazione confermata.
